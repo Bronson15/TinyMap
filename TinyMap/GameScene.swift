@@ -1,9 +1,9 @@
 //
 //  GameScene.swift
-//  DiveIntoSpriteKit
+//  TinyMap
 //
-//  Created by Paul Hudson on 16/10/2017.
-//  Copyright © 2017 Paul Hudson. All rights reserved.
+//  Created by Bronson Lane
+//  Copyright © 2019 iOSLife. All rights reserved.
 //
 
 import SpriteKit
@@ -38,7 +38,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         sprite.zPosition = 1
         sprite.name = "player"
         sprite.scaleTo(screenWidthPercentage: 0.05)
-        sprite.physicsBody = SKPhysicsBody(circleOfRadius: sprite.size.width / 2)
+        sprite.physicsBody = SKPhysicsBody(texture: sprite.texture!, size: sprite.size)
+        sprite.physicsBody?.affectedByGravity = false
+        sprite.physicsBody?.isDynamic = false
+        sprite.physicsBody?.categoryBitMask = 1
+        sprite.physicsBody?.collisionBitMask = 2
+        sprite.physicsBody?.contactTestBitMask = 2
         return sprite
     }()
     
@@ -85,7 +90,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bullet.name = "bullet"
         bullet.scaleTo(screenWidthPercentage: 0.01)
         bullet.physicsBody = SKPhysicsBody(circleOfRadius: bullet.size.width / 2)
-        bullet.physicsBody?.categoryBitMask = 1
+        bullet.physicsBody?.categoryBitMask = 0
+        bullet.physicsBody?.contactTestBitMask = 1 | 2
+        bullet.physicsBody?.collisionBitMask = 0
         
         if self.bulletCount < 20 {
             if bulletTime == 0.0 {
@@ -101,6 +108,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         var dx = CGFloat(-sin(self.player.zRotation))
         var dy = CGFloat(cos(self.player.zRotation))
+        
         let magnitude = sqrt(dx * dx + dy * dy)
         
         dx /= magnitude
@@ -207,13 +215,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(sprite)
         
         sprite.physicsBody = SKPhysicsBody(texture: sprite.texture!, size: sprite.size)
-        sprite.physicsBody?.contactTestBitMask = 1
-        sprite.physicsBody?.categoryBitMask = 0
+        sprite.physicsBody?.categoryBitMask = 2
+        sprite.physicsBody?.collisionBitMask = 0
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
         guard let node = contact.bodyA.node else { return }
         guard let nodeB = contact.bodyB.node else { return }
+        
+        print(node, "a")
+        print(nodeB, "B")
         
         if (node.name == "bullet" && nodeB.name == "player") || (nodeB.name == "bullet" && node.name == "player") {
             print("im in here")
@@ -224,6 +235,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             if nodeB.name == "player" {
                 playerHit(nodeB)
             }
+        } else if node.name == "player" && nodeB.name == "enemy" {
+            playerHit(node)
         }
     }
     
