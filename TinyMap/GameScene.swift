@@ -10,12 +10,16 @@ import SpriteKit
 
 @objcMembers
 class GameScene: SKScene, SKPhysicsContactDelegate {
-    var gameTimer: Timer?
+    let cam = SKCameraNode()
+    
+    let background = SKSpriteNode(imageNamed: "background")
     
     let screenTop = (-ScreenSize.height - 90)
     let screenBottom = (ScreenSize.height + 90)
     let screenLeft = (-ScreenSize.width)
-    let screenRight = (ScreenSize.height)
+    let screenRight = (ScreenSize.width)
+    
+    var pauseButton = SKSpriteNode()
     
     enum NodesZPosition: CGFloat {
         case background, player, joystick
@@ -63,18 +67,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func setupNodes() {
         anchorPoint = CGPoint(x: 0.5, y: 0.5)
-//        addChild(background)
+        addChild(background)
         addChild(player)
         
         
         score = 0
         scoreLabel.position.y = ScreenSize.height * -0.5
         scoreLabel.zPosition = 2
-        addChild(scoreLabel)
+        cam.addChild(scoreLabel)
+        
+        pauseButton = SKSpriteNode(imageNamed: "pause")
+        pauseButton.setScale(0.5)
+        pauseButton.position = CGPoint(x: -(ScreenSize.width * -0.5), y: -(ScreenSize.height * -0.5))
+        pauseButton.zPosition = 100
+        cam.addChild(pauseButton)
     }
     
     func setupMoveJoystick() {
-        addChild(moveJoystick)
+        cam.addChild(moveJoystick)
         
         moveJoystick.trackingHandler = { [unowned self] data in
             self.player.position = CGPoint(x: self.player.position.x + (data.velocity.x * self.velocityMultiplier),
@@ -106,6 +116,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             }
         }
         
+        let wait = SKAction.wait(forDuration: 2)
+        let block = SKAction.run { bullet.removeFromParent() }
+        let removeBullet = SKAction.sequence([wait, block])
+        run(SKAction.repeatForever(removeBullet))
+        
         var dx = CGFloat(-sin(self.player.zRotation))
         var dy = CGFloat(cos(self.player.zRotation))
         
@@ -119,7 +134,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func setupRotateJoystick() {
-        addChild(rotateJoystick)
+        cam.addChild(rotateJoystick)
         
         rotateJoystick.trackingHandler = { [unowned self] data in
             self.player.zRotation = data.angular
@@ -135,12 +150,38 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupNodes()
         setupMoveJoystick()
         setupRotateJoystick()
-        gameTimer = Timer.scheduledTimer(timeInterval: 0.35, target: self, selector: #selector(createEnemy), userInfo: nil, repeats: true)
+        
+        self.camera = cam
+        
+        addChild(cam)
+        
+        let wait = SKAction.wait(forDuration: 0.5)
+        let block = SKAction.run {
+            self.createEnemy()
+        }
+        let spawnEnemy = SKAction.sequence([wait, block])
+        
+        run(SKAction.repeatForever(spawnEnemy))
         physicsWorld.contactDelegate = self
+        
+        let constraint = SKConstraint.distance(SKRange(constantValue: 0), to: player)
+        cam.constraints = [ constraint ]
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         // this method is called when the user touches the screen
+        for touch in touches
+        {
+            let location = touch.location(in: self)
+            
+            if scene?.isPaused != true{
+                if pauseButton.contains(location) {
+                    scene?.isPaused = true
+                }
+            } else {
+                scene?.isPaused = false
+            }
+        }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -149,35 +190,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
     override func update(_ currentTime: TimeInterval) {
         // this method is called before each frame is rendered
-        
-        if player.position.x < -ScreenSize.height - 75 {
-            player.position.x = -ScreenSize.height - 75
-        } else if player.position.x > ScreenSize.height + 40 {
-            player.position.x = ScreenSize.height + 40
-        }
-        
-        if player.position.y < -160 {
-            player.position.y = -160
-        } else if player.position.y > 210 {
-            player.position.y = 210
-        }
-        
-        for bullet in self.children {
-            if bullet.position.x < screenTop {
-                bullet.removeFromParent()
-                bulletCount -= 1
-            } else if bullet.position.x > screenBottom {
-                bullet.removeFromParent()
-                bulletCount -= 1
-            } else if bullet.position.y < screenLeft {
-                bullet.removeFromParent()
-                bulletCount -= 1
-            } else if bullet.position.y > screenRight {
-                bullet.removeFromParent()
-                bulletCount -= 1
-            }
-        }
-        
+        followPlayer()
+    }
+    
+    func followPlayer() {
         for node in self.children {
             let location = player.position
             var enemy = SKNode()
@@ -208,7 +224,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let intLeft = Int(screenLeft)
         let intRight = Int(screenRight)
         
-        sprite.position = CGPoint(x: -(Int.random(in: (intLeft...intRight))), y: -(Int.random(in: (intTop...intBottom))))
+        sprite.position = CGPoint(x: Int.random(in: (intLeft...intRight)), y: Int.random(in: (intTop...intBottom)))
         sprite.name = "enemy"
         sprite.zPosition = 1
         sprite.scaleTo(screenWidthPercentage: 0.04)
@@ -223,11 +239,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         guard let node = contact.bodyA.node else { return }
         guard let nodeB = contact.bodyB.node else { return }
         
-        print(node, "a")
-        print(nodeB, "B")
-        
         if (node.name == "bullet" && nodeB.name == "player") || (nodeB.name == "bullet" && node.name == "player") {
-            print("im in here")
             return
         }
         if node.name == "enemy" {
@@ -251,10 +263,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         let gameOver = SKSpriteNode(imageNamed: "gameOver-2")
         gameOver.zPosition = 10
-        addChild(gameOver)
+        cam.addChild(gameOver)
+        
+        isUserInteractionEnabled = false
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            self.isUserInteractionEnabled = false
             if let scene = GameScene(fileNamed: "MainMenu") {
                 scene.scaleMode = .aspectFill
                 self.view?.presentScene(scene)
