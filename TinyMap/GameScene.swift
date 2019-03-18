@@ -21,10 +21,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var pauseButton = SKSpriteNode()
     
-    enum NodesZPosition: CGFloat {
-        case background, player, joystick
-    }
-    
     let scoreLabel = SKLabelNode(fontNamed: "AvenirNextCondensed-Bold")
     var score = 0 {
         didSet {
@@ -54,32 +50,33 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     lazy var moveJoystick: AnalogJoystick = {
         let js = AnalogJoystick(diameter: 100, colors: nil, images: (substrate: #imageLiteral(resourceName: "jSubstrate"), stick: #imageLiteral(resourceName: "jStick")))
         js.position = CGPoint(x: ScreenSize.width * -0.5 + js.radius + 45, y: ScreenSize.height * -0.5 + js.radius + 45)
-        js.zPosition = NodesZPosition.joystick.rawValue
+        js.zPosition = 3
         return js
     }()
     
     lazy var rotateJoystick: AnalogJoystick = {
         let js = AnalogJoystick(diameter: 100, colors: nil, images: (substrate: #imageLiteral(resourceName: "jSubstrate"), stick: #imageLiteral(resourceName: "jStick")))
         js.position = CGPoint(x: -(ScreenSize.width * -0.5 + js.radius + 45), y: ScreenSize.height * -0.5 + js.radius + 45)
-        js.zPosition = NodesZPosition.joystick.rawValue
+        js.zPosition = 3
         return js
     }()
     
     func setupNodes() {
         anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        addChild(background)
+        background.zPosition = 2
+        background.scaleTo(screenWidthPercentage: 1.2)
+        cam.addChild(background)
         addChild(player)
-        
         
         score = 0
         scoreLabel.position.y = ScreenSize.height * -0.5
-        scoreLabel.zPosition = 2
+        scoreLabel.zPosition = 3
         cam.addChild(scoreLabel)
         
         pauseButton = SKSpriteNode(imageNamed: "pause")
         pauseButton.setScale(0.5)
         pauseButton.position = CGPoint(x: -(ScreenSize.width * -0.5), y: -(ScreenSize.height * -0.5))
-        pauseButton.zPosition = 100
+        pauseButton.zPosition = 3
         cam.addChild(pauseButton)
     }
     
@@ -97,6 +94,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func addBulletOnRotate() {
         let bullet = SKSpriteNode(imageNamed: "player")
         bullet.position = self.player.position
+        bullet.zPosition = 1
         bullet.name = "bullet"
         bullet.scaleTo(screenWidthPercentage: 0.01)
         bullet.physicsBody = SKPhysicsBody(circleOfRadius: bullet.size.width / 2)
@@ -117,7 +115,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         let wait = SKAction.wait(forDuration: 2)
-        let block = SKAction.run { bullet.removeFromParent() }
+        let block = SKAction.run {
+            bullet.removeFromParent()
+            self.bulletCount -= 1
+        }
         let removeBullet = SKAction.sequence([wait, block])
         run(SKAction.repeatForever(removeBullet))
         
@@ -141,7 +142,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             self.addBulletOnRotate()
         }
-        
     }
     
     override func didMove(to view: SKView) {

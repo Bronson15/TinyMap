@@ -15,7 +15,7 @@ class MainMenu: SKScene{
     override func didMove(to view: SKView) {
         // this method is called when your game scene is ready to run
 //        addChild(music)
-        let background = SKSpriteNode(imageNamed: "background")
+        let background = SKSpriteNode(imageNamed: "space")
         background.zPosition = -1
         addChild(background)
         
