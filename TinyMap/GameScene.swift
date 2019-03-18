@@ -14,6 +14,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     let background = SKSpriteNode(imageNamed: "background")
     
+    let fogOfWar = SKLightNode()
+    
     let screenTop = (-ScreenSize.height - 90)
     let screenBottom = (ScreenSize.height + 90)
     let screenLeft = (-ScreenSize.width)
@@ -78,6 +80,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         pauseButton.position = CGPoint(x: -(ScreenSize.width * -0.5), y: -(ScreenSize.height * -0.5))
         pauseButton.zPosition = 3
         cam.addChild(pauseButton)
+        
+        fogOfWar.position = player.position
+        fogOfWar.categoryBitMask = 2
+        fogOfWar.lightColor = .white
+        fogOfWar.ambientColor = .black
+        fogOfWar.falloff = 5
+        cam.addChild(fogOfWar)
     }
     
     func setupMoveJoystick() {
@@ -151,6 +160,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupMoveJoystick()
         setupRotateJoystick()
         
+        self.backgroundColor = .black
+        
         self.camera = cam
         
         addChild(cam)
@@ -219,12 +230,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func createEnemy() {
         let sprite = SKSpriteNode(imageNamed: "player")
-        let intTop = Int(screenTop + 250)
-        let intBottom = Int(screenBottom - 250)
-        let intLeft = Int(screenLeft)
-        let intRight = Int(screenRight)
         
-        sprite.position = CGPoint(x: Int.random(in: (intLeft...intRight)), y: Int.random(in: (intTop...intBottom)))
+        let angle = (CGFloat(arc4random_uniform(360)) * CGFloat.pi) / 180.0
+        let radius = (size.width >= size.height ? (size.width + sprite.size.width) : (size.height + sprite.size.height)) / 2
+        sprite.position = CGPoint(x: cos(angle) * radius, y: sin(angle) * radius)
         sprite.name = "enemy"
         sprite.zPosition = 1
         sprite.scaleTo(screenWidthPercentage: 0.04)
@@ -233,6 +242,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         sprite.physicsBody = SKPhysicsBody(texture: sprite.texture!, size: sprite.size)
         sprite.physicsBody?.categoryBitMask = 2
         sprite.physicsBody?.collisionBitMask = 0
+        sprite.lightingBitMask = 2
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
