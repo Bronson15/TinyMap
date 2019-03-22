@@ -14,13 +14,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     let background = SKSpriteNode(imageNamed: "background")
     
-    let fogOfWar = SKLightNode()
-    
-    let screenTop = (-ScreenSize.height - 90)
-    let screenBottom = (ScreenSize.height + 90)
-    let screenLeft = (-ScreenSize.width)
-    let screenRight = (ScreenSize.width)
-    
     var pauseButton = SKSpriteNode()
     
     let scoreLabel = SKLabelNode(fontNamed: "AvenirNextCondensed-Bold")
@@ -32,7 +25,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var bulletCount = 0
     
-    let velocityMultiplier: CGFloat = 0.12
+    let velocityMultiplier: CGFloat = 0.05
     
     lazy var player: SKSpriteNode = {
         var sprite = SKSpriteNode(imageNamed: "player")
@@ -82,13 +75,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         pauseButton.position = CGPoint(x: -(ScreenSize.width * -0.5), y: -(ScreenSize.height * -0.5))
         pauseButton.zPosition = 3
         cam.addChild(pauseButton)
-        
-//        fogOfWar.position = player.position
-//        fogOfWar.categoryBitMask = 0
-//        fogOfWar.lightColor = .white
-//        fogOfWar.ambientColor = .black
-//        fogOfWar.falloff = 5
-//        cam.addChild(fogOfWar)
     }
     
     func setupMoveJoystick() {
@@ -105,20 +91,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let rayStart = playerPos
         let rayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
         
-        let yourline = SKShapeNode()
-        let pathToDraw = CGMutablePath()
-        pathToDraw.move(to: rayStart)
-        pathToDraw.addLine(to: rayEnd)
-        yourline.path = pathToDraw
-        yourline.strokeColor = SKColor.red
-        addChild(yourline)
-        
-        print("angle", angle)
-        print("rayEnd", rayEnd)
-        
         scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEnd) { (body, _, _, stop) in
-            if let sprite = body.node as? SKSpriteNode, body.categoryBitMask == 2 {
-                sprite.isHidden = false
+            let sprite = body.node as? SKSpriteNode
+            
+            if body.categoryBitMask == 2 {
+                sprite?.isHidden = false
             }
         }
     }
