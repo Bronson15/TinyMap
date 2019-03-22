@@ -70,6 +70,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         cam.addChild(background)
         addChild(player)
         
+        cam.zRotation = 0
+        
         score = 0
         scoreLabel.position.y = ScreenSize.height * -0.5
         scoreLabel.zPosition = 3
@@ -81,12 +83,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         pauseButton.zPosition = 3
         cam.addChild(pauseButton)
         
-        fogOfWar.position = player.position
-        fogOfWar.categoryBitMask = 2
-        fogOfWar.lightColor = .white
-        fogOfWar.ambientColor = .black
-        fogOfWar.falloff = 5
-        cam.addChild(fogOfWar)
+//        fogOfWar.position = player.position
+//        fogOfWar.categoryBitMask = 0
+//        fogOfWar.lightColor = .white
+//        fogOfWar.ambientColor = .black
+//        fogOfWar.falloff = 5
+//        cam.addChild(fogOfWar)
     }
     
     func setupMoveJoystick() {
@@ -95,6 +97,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         moveJoystick.trackingHandler = { [unowned self] data in
             self.player.position = CGPoint(x: self.player.position.x + (data.velocity.x * self.velocityMultiplier),
                                          y: self.player.position.y + (data.velocity.y * self.velocityMultiplier))
+        }
+    }
+    
+    func isEnemyVisible(playerPos: CGPoint, angle: CGFloat, distance: CGFloat) {
+        
+        let rayStart = playerPos
+        let rayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
+        
+        let yourline = SKShapeNode()
+        let pathToDraw = CGMutablePath()
+        pathToDraw.move(to: rayStart)
+        pathToDraw.addLine(to: rayEnd)
+        yourline.path = pathToDraw
+        yourline.strokeColor = SKColor.red
+        addChild(yourline)
+        
+        print("angle", angle)
+        print("rayEnd", rayEnd)
+        
+        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEnd) { (body, _, _, stop) in
+            if let sprite = body.node as? SKSpriteNode, body.categoryBitMask == 2 {
+                sprite.isHidden = false
+            }
         }
     }
     
@@ -149,7 +174,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         rotateJoystick.trackingHandler = { [unowned self] data in
             self.player.zRotation = data.angular
             
-            self.addBulletOnRotate()
+//            self.addBulletOnRotate()
+            
+            self.isEnemyVisible(playerPos: self.player.position, angle: self.player.zRotation, distance: 200)
         }
     }
     
@@ -160,7 +187,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupMoveJoystick()
         setupRotateJoystick()
         
-        self.backgroundColor = .black
+        //self.backgroundColor = .black
         
         self.camera = cam
         
@@ -202,16 +229,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     override func update(_ currentTime: TimeInterval) {
         // this method is called before each frame is rendered
         followPlayer()
+        
+        
+       
     }
     
     func followPlayer() {
+        var enemy = SKNode()
         for node in self.children {
-            let location = player.position
-            var enemy = SKNode()
-            
             if node.name == "enemy" {
                 enemy = node
             }
+            
+            let location = player.position
+            
             //Aim
             let dx = location.x - enemy.position.x
             let dy = location.y - enemy.position.y
@@ -228,6 +259,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
+    
     func createEnemy() {
         let sprite = SKSpriteNode(imageNamed: "player")
         
@@ -237,12 +269,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         sprite.name = "enemy"
         sprite.zPosition = 1
         sprite.scaleTo(screenWidthPercentage: 0.04)
+        
         addChild(sprite)
         
         sprite.physicsBody = SKPhysicsBody(texture: sprite.texture!, size: sprite.size)
         sprite.physicsBody?.categoryBitMask = 2
         sprite.physicsBody?.collisionBitMask = 0
-        sprite.lightingBitMask = 2
+        sprite.isHidden = true
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -255,10 +288,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if node.name == "enemy" {
             enemyHit(node)
             if nodeB.name == "player" {
-                playerHit(nodeB)
+//                playerHit(nodeB)
             }
         } else if node.name == "player" && nodeB.name == "enemy" {
-            playerHit(node)
+//            playerHit(node)
         }
     }
     
