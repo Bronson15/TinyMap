@@ -11,6 +11,7 @@ import SpriteKit
 @objcMembers
 class GameScene: SKScene, SKPhysicsContactDelegate {
     let cam = SKCameraNode()
+    let flashlight = SKNode()
     
     let background = SKSpriteNode(imageNamed: "background")
     
@@ -45,20 +46,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     lazy var moveJoystick: AnalogJoystick = {
         let js = AnalogJoystick(diameter: 100, colors: nil, images: (substrate: #imageLiteral(resourceName: "jSubstrate"), stick: #imageLiteral(resourceName: "jStick")))
         js.position = CGPoint(x: ScreenSize.width * -0.5 + js.radius + 45, y: ScreenSize.height * -0.5 + js.radius + 45)
-        js.zPosition = 3
+        js.zPosition = 6
         return js
     }()
     
     lazy var rotateJoystick: AnalogJoystick = {
         let js = AnalogJoystick(diameter: 100, colors: nil, images: (substrate: #imageLiteral(resourceName: "jSubstrate"), stick: #imageLiteral(resourceName: "jStick")))
         js.position = CGPoint(x: -(ScreenSize.width * -0.5 + js.radius + 45), y: ScreenSize.height * -0.5 + js.radius + 45)
-        js.zPosition = 3
+        js.zPosition = 6
         return js
     }()
     
     func setupNodes() {
         anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        background.zPosition = 2
+        background.zPosition = 5
         background.scaleTo(screenWidthPercentage: 1.2)
         cam.addChild(background)
         addChild(player)
@@ -67,14 +68,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         score = 0
         scoreLabel.position.y = ScreenSize.height * -0.5
-        scoreLabel.zPosition = 3
+        scoreLabel.zPosition = 6
         cam.addChild(scoreLabel)
         
         pauseButton = SKSpriteNode(imageNamed: "pause")
         pauseButton.setScale(0.5)
         pauseButton.position = CGPoint(x: -(ScreenSize.width * -0.5), y: -(ScreenSize.height * -0.5))
-        pauseButton.zPosition = 3
+        pauseButton.zPosition = 6
         cam.addChild(pauseButton)
+        
+        
+        addChild(flashlight)
     }
     
     func setupMoveJoystick() {
@@ -86,17 +90,45 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
+    var raycastHitting = false
+    var hitNode = SKNode()
+    
     func isEnemyVisible(playerPos: CGPoint, angle: CGFloat, distance: CGFloat) {
+        flashlight.removeAllChildren()
         
         let rayStart = playerPos
-        let rayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
+        let leftRayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
+        let rightRayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
         
-        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEnd) { (body, _, _, stop) in
+        
+        let line = SKShapeNode()
+        let pathToDraw = CGMutablePath()
+        pathToDraw.move(to: rayStart)
+        pathToDraw.addLine(to: leftRayEnd)
+        line.path = pathToDraw
+        line.strokeColor = SKColor.init(white: 1, alpha: 0.9)
+        line.lineWidth = 0.1
+        //line.glowWidth = 25
+        flashlight.zPosition = 3
+        flashlight.addChild(line)
+        
+        let line2 = SKShapeNode()
+        let pathToDraw2 = CGMutablePath()
+        pathToDraw2.move(to: rayStart)
+        pathToDraw2.addLine(to: rightRayEnd)
+        line2.path = pathToDraw
+        line2.strokeColor = SKColor.init(white: 1, alpha: 0.9)
+        line2.lineWidth = 0.1
+        //line2.glowWidth = 25
+        flashlight.addChild(line2)
+        
+        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: leftRayEnd) { (body, point, normal, stop) in
             let sprite = body.node as? SKSpriteNode
-            
-            if body.categoryBitMask == 2 {
-                sprite?.isHidden = false
-            }
+//            if body.categoryBitMask == 2 {
+//                sprite?.isHidden = true
+//            }else if body.categoryBitMask == 1 {
+//
+//            } else { sprite?.isHidden = true }
         }
     }
     
@@ -151,9 +183,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         rotateJoystick.trackingHandler = { [unowned self] data in
             self.player.zRotation = data.angular
             
-//            self.addBulletOnRotate()
-            
-            self.isEnemyVisible(playerPos: self.player.position, angle: self.player.zRotation, distance: 200)
+            self.addBulletOnRotate()
         }
     }
     
@@ -163,8 +193,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupNodes()
         setupMoveJoystick()
         setupRotateJoystick()
-        
-        //self.backgroundColor = .black
         
         self.camera = cam
         
@@ -206,9 +234,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     override func update(_ currentTime: TimeInterval) {
         // this method is called before each frame is rendered
         followPlayer()
+        self.isEnemyVisible(playerPos: self.player.position, angle: self.player.zRotation, distance: 250)
         
         
-       
+        
     }
     
     func followPlayer() {
@@ -252,7 +281,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         sprite.physicsBody = SKPhysicsBody(texture: sprite.texture!, size: sprite.size)
         sprite.physicsBody?.categoryBitMask = 2
         sprite.physicsBody?.collisionBitMask = 0
-        sprite.isHidden = true
+//        sprite.isHidden = true
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -265,10 +294,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if node.name == "enemy" {
             enemyHit(node)
             if nodeB.name == "player" {
-//                playerHit(nodeB)
+                playerHit(nodeB)
+            } else if nodeB.name == "bullet" {
+                removeBullet(nodeB)
             }
         } else if node.name == "player" && nodeB.name == "enemy" {
-//            playerHit(node)
+            playerHit(node)
+        } else if node.name == "bullet" {
+            removeBullet(node)
+            if nodeB.name == "enemy" {
+                enemyHit(nodeB)
+            }
         }
     }
     
@@ -276,6 +312,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         node.removeFromParent()
         bulletCount -= 1
         score += 1
+    }
+    
+    func removeBullet(_ node: SKNode) {
+        node.removeFromParent()
+        bulletCount -= 1
     }
     
     func playerHit(_ node: SKNode) {
