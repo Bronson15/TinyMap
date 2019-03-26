@@ -95,41 +95,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func isEnemyVisible(playerPos: CGPoint, angle: CGFloat, distance: CGFloat) {
         flashlight.removeAllChildren()
-        
+
         let rayStart = playerPos
-        let leftRayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
-        let rightRayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
-        
-        
+        let rayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
+
+
         let line = SKShapeNode()
         let pathToDraw = CGMutablePath()
         pathToDraw.move(to: rayStart)
-        pathToDraw.addLine(to: leftRayEnd)
+        pathToDraw.addLine(to: rayEnd)
         line.path = pathToDraw
         line.strokeColor = SKColor.init(white: 1, alpha: 0.9)
         line.lineWidth = 0.1
-        //line.glowWidth = 25
         flashlight.zPosition = 3
         flashlight.addChild(line)
-        
-        let line2 = SKShapeNode()
-        let pathToDraw2 = CGMutablePath()
-        pathToDraw2.move(to: rayStart)
-        pathToDraw2.addLine(to: rightRayEnd)
-        line2.path = pathToDraw
-        line2.strokeColor = SKColor.init(white: 1, alpha: 0.9)
-        line2.lineWidth = 0.1
-        //line2.glowWidth = 25
-        flashlight.addChild(line2)
-        
-        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: leftRayEnd) { (body, point, normal, stop) in
-            let sprite = body.node as? SKSpriteNode
+
+//        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEnd) { (body, point, normal, stop) in
+//            let sprite = body.node as? SKSpriteNode
 //            if body.categoryBitMask == 2 {
 //                sprite?.isHidden = true
 //            }else if body.categoryBitMask == 1 {
 //
 //            } else { sprite?.isHidden = true }
-        }
+//        }
     }
     
     var bulletTime = 0.0
@@ -150,7 +138,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 self.addChild(bullet)
                 self.bulletCount += 1
                 self.bulletTime += 1.0
-            } else if bulletTime <= 6.0 {
+            } else if bulletTime <= 10.0 {
                 self.bulletTime += 1.0
             } else {
                 self.bulletTime = 0
@@ -182,7 +170,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         rotateJoystick.trackingHandler = { [unowned self] data in
             self.player.zRotation = data.angular
-            
             self.addBulletOnRotate()
         }
     }
@@ -205,6 +192,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let spawnEnemy = SKAction.sequence([wait, block])
         
         run(SKAction.repeatForever(spawnEnemy))
+        
         physicsWorld.contactDelegate = self
         
         let constraint = SKConstraint.distance(SKRange(constantValue: 0), to: player)
@@ -233,36 +221,34 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
     override func update(_ currentTime: TimeInterval) {
         // this method is called before each frame is rendered
-        followPlayer()
-        self.isEnemyVisible(playerPos: self.player.position, angle: self.player.zRotation, distance: 250)
-        
-        
-        
-    }
-    
-    func followPlayer() {
-        var enemy = SKNode()
         for node in self.children {
             if node.name == "enemy" {
-                enemy = node
+                run(SKAction.run {
+                    self.followPlayer(enemy: node as! SKSpriteNode)
+                })
             }
-            
-            let location = player.position
-            
-            //Aim
-            let dx = location.x - enemy.position.x
-            let dy = location.y - enemy.position.y
-            let angle = atan2(dy, dx)
-            
-            enemy.zRotation = angle
-            
-            //Seek
-            let vx = cos(angle) * 2
-            let vy = sin(angle) * 2
-            
-            enemy.position.x += vx
-            enemy.position.y += vy
         }
+        self.isEnemyVisible(playerPos: self.player.position, angle: self.player.zRotation, distance: 250)
+    }
+    
+    func followPlayer(enemy: SKSpriteNode ) {
+        
+        let location = player.position
+        
+        //Aim
+        let dx = location.x - enemy.position.x
+        let dy = location.y - enemy.position.y
+        let angle = atan2(dy, dx)
+        
+        enemy.zRotation = angle
+        
+        //Seek
+        let vx = cos(angle) * 0.5
+        let vy = sin(angle) * 0.5
+        
+        enemy.position.x += vx
+        enemy.position.y += vy
+    
     }
     
     
