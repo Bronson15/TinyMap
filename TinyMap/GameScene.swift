@@ -77,7 +77,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         pauseButton.zPosition = 6
         cam.addChild(pauseButton)
         
-        
+        addChild(enemyContainer)
         addChild(flashlight)
     }
     
@@ -89,9 +89,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                                          y: self.player.position.y + (data.velocity.y * self.velocityMultiplier))
         }
     }
-    
-    var raycastHitting = false
-    var hitNode = SKNode()
     
     func isEnemyVisible(playerPos: CGPoint, angle: CGFloat, distance: CGFloat) {
         flashlight.removeAllChildren()
@@ -110,14 +107,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         flashlight.zPosition = 3
         flashlight.addChild(line)
 
-//        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEnd) { (body, point, normal, stop) in
-//            let sprite = body.node as? SKSpriteNode
-//            if body.categoryBitMask == 2 {
-//                sprite?.isHidden = true
-//            }else if body.categoryBitMask == 1 {
-//
-//            } else { sprite?.isHidden = true }
-//        }
+        enemyContainer.children.forEach{ $0.isHidden = true}
+        
+        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEnd) { (body, point, normal, stop) in
+            if let sprite = body.node as? SKSpriteNode, body.categoryBitMask == 2 {
+                sprite.isHidden = false
+            }
+        }
     }
     
     var bulletTime = 0.0
@@ -125,7 +121,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func addBulletOnRotate() {
         let bullet = SKSpriteNode(imageNamed: "player")
         bullet.position = self.player.position
-        bullet.zPosition = 1
+        bullet.zPosition = 2
         bullet.name = "bullet"
         bullet.scaleTo(screenWidthPercentage: 0.01)
         bullet.physicsBody = SKPhysicsBody(circleOfRadius: bullet.size.width / 2)
@@ -170,7 +166,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         rotateJoystick.trackingHandler = { [unowned self] data in
             self.player.zRotation = data.angular
-            self.addBulletOnRotate()
+            //self.addBulletOnRotate()
         }
     }
     
@@ -221,12 +217,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
     override func update(_ currentTime: TimeInterval) {
         // this method is called before each frame is rendered
-        for node in self.children {
-            if node.name == "enemy" {
-                run(SKAction.run {
-                    self.followPlayer(enemy: node as! SKSpriteNode)
-                })
-            }
+        for node in enemyContainer.children {
+            run(SKAction.run {
+                self.followPlayer(enemy: node as! SKSpriteNode)
+            })
+            
         }
         self.isEnemyVisible(playerPos: self.player.position, angle: self.player.zRotation, distance: 250)
     }
@@ -243,15 +238,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         enemy.zRotation = angle
         
         //Seek
-        let vx = cos(angle) * 0.5
-        let vy = sin(angle) * 0.5
+        let vx = cos(angle) * 2
+        let vy = sin(angle) * 2
         
         enemy.position.x += vx
         enemy.position.y += vy
     
     }
     
-    
+    var enemyContainer = SKSpriteNode()
     func createEnemy() {
         let sprite = SKSpriteNode(imageNamed: "player")
         
@@ -262,12 +257,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         sprite.zPosition = 1
         sprite.scaleTo(screenWidthPercentage: 0.04)
         
-        addChild(sprite)
+        enemyContainer.addChild(sprite)
         
         sprite.physicsBody = SKPhysicsBody(texture: sprite.texture!, size: sprite.size)
         sprite.physicsBody?.categoryBitMask = 2
         sprite.physicsBody?.collisionBitMask = 0
-//        sprite.isHidden = true
+        sprite.isHidden = true
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -277,21 +272,21 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if (node.name == "bullet" && nodeB.name == "player") || (nodeB.name == "bullet" && node.name == "player") {
             return
         }
-        if node.name == "enemy" {
-            enemyHit(node)
-            if nodeB.name == "player" {
-                playerHit(nodeB)
-            } else if nodeB.name == "bullet" {
-                removeBullet(nodeB)
-            }
-        } else if node.name == "player" && nodeB.name == "enemy" {
-            playerHit(node)
-        } else if node.name == "bullet" {
-            removeBullet(node)
-            if nodeB.name == "enemy" {
-                enemyHit(nodeB)
-            }
-        }
+//        if node.name == "enemy" {
+//            enemyHit(node)
+//            if nodeB.name == "player" {
+//                playerHit(nodeB)
+//            } else if nodeB.name == "bullet" {
+//                removeBullet(nodeB)
+//            }
+//        } else if node.name == "player" && nodeB.name == "enemy" {
+//            playerHit(node)
+//        } else if node.name == "bullet" {
+//            removeBullet(node)
+//            if nodeB.name == "enemy" {
+//                enemyHit(nodeB)
+//            }
+//        }
     }
     
     func enemyHit(_ node: SKNode) {
