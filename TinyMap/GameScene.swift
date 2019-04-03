@@ -92,28 +92,38 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func isEnemyVisible(playerPos: CGPoint, angle: CGFloat, distance: CGFloat) {
         flashlight.removeAllChildren()
-
-        let rayStart = playerPos
-        let rayEnd = CGPoint(x: (player.position.x + (distance * -sin(angle))), y: (player.position.y + (distance * cos(angle))))
-
-
-        let line = SKShapeNode()
-        let pathToDraw = CGMutablePath()
-        pathToDraw.move(to: rayStart)
-        pathToDraw.addLine(to: rayEnd)
-        line.path = pathToDraw
-        line.strokeColor = SKColor.init(white: 1, alpha: 0.9)
-        line.lineWidth = 0.1
-        flashlight.zPosition = 3
-        flashlight.addChild(line)
-
-        enemyContainer.children.forEach{ $0.isHidden = true}
         
-        scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEnd) { (body, point, normal, stop) in
-            if let sprite = body.node as? SKSpriteNode, body.categoryBitMask == 2 {
-                sprite.isHidden = false
+        let rayStart = playerPos
+        
+        let angleInDegrees = fmodf(360.0 + Float(angle) * (180.0 / Float(Double.pi)), 360.0)
+        let startAngle = angleInDegrees - 50
+        let endAngle = angleInDegrees + 50
+        let increment: Float = 0.5
+        
+        for i in stride(from: startAngle, to: endAngle, by: increment) {
+            
+            let rayEndTest = CGPoint(x: (player.position.x + (distance * -sin(angle) + CGFloat(i))), y: (player.position.y + (distance * cos(angle) + CGFloat(i))))
+            
+            let line = SKShapeNode()
+            let pathToDraw = CGMutablePath()
+            pathToDraw.move(to: rayStart)
+            pathToDraw.addLine(to: rayEndTest)
+            line.path = pathToDraw
+            line.strokeColor = SKColor.init(white: 1, alpha: 0.9)
+            line.lineWidth = 0.1
+            flashlight.zPosition = 3
+            flashlight.addChild(line)
+            
+            enemyContainer.children.forEach{ $0.isHidden = true}
+            
+            scene?.physicsWorld.enumerateBodies(alongRayStart: rayStart, end: rayEndTest) { (body, point, normal, stop) in
+                if let sprite = body.node as? SKSpriteNode, body.categoryBitMask == 2 {
+                    sprite.isHidden = false
+                }
             }
         }
+
+        
     }
     
     var bulletTime = 0.0
